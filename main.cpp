@@ -1,3 +1,6 @@
+#define _POSIX_C_SOURCE 200809L
+#define _GNU_SOURCE
+
 #include <cstdlib>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -23,7 +26,6 @@
 #include "headers/time.h"
 #include "assets/flatmodel.h"
 #include "assets/skybox.h"
-#include "headers/text_renderer.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
@@ -89,7 +91,6 @@ int main() {
     cats.push_back(Cat(glm::vec3(x, 1.5f, z), cat, jaegerShader));
   }
   Model bottle("resources/3d-sculptures/columbia_whiskey/Whiskey_Bottle.obj", "resources/3d-sculptures/columbia_whiskey/WhiskeyBottle_DIFF.png");
-  TextRenderer textRenderer("resources/fonts/DejaVuSans.ttf", 24);
 
   /*std::vector<std::string> skyboxFaces = {
     "resources/skybox/miramar_rt.tga", // +X right
@@ -247,14 +248,13 @@ int main() {
     jaegerShader.setMat4("model", bottleModel);
     bottle.draw();
 
+    glDisable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glDisable(GL_DEPTH_TEST);
 
-    textRenderer.RenderText("REPPING: https://enrique.se", 100.0f, 500.0f, 1.0f, glm::vec3(1.0f, 1.0f, 0.0f));
+    textRenderer.RenderText("JÄGER", 25.0f, 560.0f, 0.8f, glm::vec3(1.0f, 0.8f, 0.2f));
 
     glEnable(GL_DEPTH_TEST);
-    glDisable(GL_BLEND);
 
     glfwSwapBuffers(window);
     glfwPollEvents();
