@@ -21,7 +21,6 @@
 const int SRC_WIDTH = 800;
 const int SRC_HEIGHT = 600;
 
-
 void framebuffer_size_callback(GLFWwindow *window, int width, int height);
 void processInput(GLFWwindow *window);
 void mouse_callback(GLFWwindow *window, double xpos, double ypos) {

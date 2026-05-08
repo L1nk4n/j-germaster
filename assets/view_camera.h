@@ -1,6 +1,7 @@
 #ifndef VIEW_CAMERA_H
 #define VIEW_CAMERA_H
 
+#include <cstdlib>
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 #include <GLFW/glfw3.h>
@@ -8,6 +9,8 @@
 #include <cmath>
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
+
+const float mapSize = 50.0f;
 
 class Camera {
   public:
@@ -38,7 +41,6 @@ class Camera {
       glm::vec3 flatFront = glm::normalize(glm::vec3(cameraFront.x, 0.0f, cameraFront.z));
       glm::vec3 flatRight = glm::normalize(glm::cross(flatFront, cameraUp));
 
-
       if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
           cameraPos += cameraSpeed * cameraFront;
       if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
@@ -56,7 +58,7 @@ class Camera {
       verticalVelocity -= gravity * Time::deltaTime;
       cameraPos.y += verticalVelocity * Time::deltaTime;
 
-      if(cameraPos.y <= groundLevel + eyeHeight) {
+      if(cameraPos.y <= groundLevel + eyeHeight && (std::abs(cameraPos.x) < mapSize) && (std::abs(cameraPos.z) < mapSize)) {
         cameraPos.y = groundLevel + eyeHeight;
         verticalVelocity = 0.0f;
         isGrounded = true;
