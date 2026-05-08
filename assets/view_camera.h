@@ -4,6 +4,8 @@
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 #include <GLFW/glfw3.h>
+#include "../headers/time.h"
+#include <cmath>
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
 
@@ -19,7 +21,9 @@ class Camera {
       pitch(0.0f),
       firstMouse(true),
       lastX(400.0f),
-      lastY(300.0f)
+      lastY(300.0f),
+      verticalVelocity(0.0f),
+      isGrounded(true)
   {}
 
   void update() {
@@ -29,7 +33,12 @@ class Camera {
   }
 
   void processInput(GLFWwindow* window) {
-      const float cameraSpeed = 5.5f * deltaTime;
+      const float cameraSpeed = 5.5f * Time::deltaTime;
+
+      glm::vec3 flatFront = glm::normalize(glm::vec3(cameraFront.x, 0.0f, cameraFront.z));
+      glm::vec3 flatRight = glm::normalize(glm::cross(flatFront, cameraUp));
+
+
       if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
           cameraPos += cameraSpeed * cameraFront;
       if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
@@ -38,6 +47,20 @@ class Camera {
           cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
       if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
           cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+
+      if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && isGrounded) {
+        verticalVelocity = jumpStrength;
+        isGrounded = false;
+      }
+
+      verticalVelocity -= gravity * Time::deltaTime;
+      cameraPos.y += verticalVelocity * Time::deltaTime;
+
+      if(cameraPos.y <= groundLevel + eyeHeight) {
+        cameraPos.y = groundLevel + eyeHeight;
+        verticalVelocity = 0.0f;
+        isGrounded = true;
+      }
   }
 
   void handleMouse(double xpos, double ypos) {
@@ -73,6 +96,11 @@ class Camera {
   }
 
 private:
+  static constexpr float gravity = 20.0f;
+  static constexpr float jumpStrength = 7.0f;
+  static constexpr float eyeHeight = 1.7f;
+  static constexpr float groundLevel = 0.0f;
+
   glm::vec3 cameraPos;
   glm::vec3 cameraFront;
   glm::vec3 cameraUp;
@@ -85,6 +113,9 @@ private:
   bool firstMouse;
   float lastX;
   float lastY;
+
+  float verticalVelocity;
+  bool isGrounded;
 };
 
 #endif
