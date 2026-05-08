@@ -107,7 +107,7 @@ int main() {
     "resources/skybox/miramar_dn.tga", // -Y
     "resources/skybox/miramar_bk.tga", // +Z (bytt)
     "resources/skybox/miramar_ft.tga"  // -Z (bytt)
-};
+  };
 
   Shader skyboxShader("assets/skybox.vs", "assets/skybox.fs");
   Skybox skybox(skyboxFaces);
@@ -117,7 +117,18 @@ int main() {
   jaegerShader.use();
   jaegerShader.setInt("texture1", 0);
   jaegerShader.setVec3("lightColor", 1.0f, 1.0f, 1.0f);
-  jaegerShader.setVec3("lightPos", lamp.lightPos());
+
+  jaegerShader.setVec3("material.ambient", 1.0f, 1.0f, 1.0f);
+  jaegerShader.setVec3("material.diffuse", 1.0f, 1.0f, 1.0f);
+  jaegerShader.setVec3("material.specular", 0.5f, 0.5f, 0.5f);
+  jaegerShader.setInt("material.shininess", 64);
+
+  jaegerShader.setVec3("light.ambient", 0.2f, 0.2f, 0.2f);
+  jaegerShader.setVec3("light.diffuse", 0.5f, 0.5f, 0.5f);
+  jaegerShader.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
+  jaegerShader.setVec3("light.direction", 0.0f, -1.0f, 0.0f);
+
+  lightingShader.use();
   lightingShader.setInt("texture1", 0);
 
   // fps deklaration
@@ -135,6 +146,7 @@ int main() {
     Time::update();
     processInput(window);
     camera.processInput(window);
+    jaegerShader.setVec3("viewPos", camera.getEyePosition());
     raycaster.update(window, camera, SRC_WIDTH, SRC_HEIGHT, 45.0f);
     if (cooldownRemaining > 0.0f) cooldownRemaining -= Time::deltaTime;
     if (muzzleFlashTimer > 0.0f) muzzleFlashTimer -= Time::deltaTime;
@@ -206,7 +218,7 @@ int main() {
     pistolModel = glm::scale(pistolModel, glm::vec3(0.6f));
     pistolModel = glm::rotate(pistolModel, glm::radians(-25.0f), glm::vec3(0.0f, 0.0f, 1.0f)); // roll
     pistolModel = glm::rotate(pistolModel, glm::radians(10.0f), glm::vec3(1.0f, 0.0f, 0.0f)); // pitch
-    pistolModel = glm::rotate(pistolModel, glm::radians(95.0f), glm::vec3(0.0f, 1.0f, 0.0f)); // yaw                                                                             //
+    pistolModel = glm::rotate(pistolModel, glm::radians(95.0f), glm::vec3(0.0f, 1.0f, 0.0f)); // yaw
     pistolModel = glm::translate(pistolModel, glm::vec3(-8.0f, 0.4f, 4.4f));
 
     jaegerShader.setMat4("view", glm::mat4(1.0f));

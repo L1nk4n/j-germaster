@@ -55,8 +55,7 @@ public:
                 std::cout << "Cubemap failed to load: " << faces[i] << std::endl;
                 stbi_image_free(data);
             }
-        }
-        stbi_set_flip_vertically_on_load(true);
+        }        stbi_set_flip_vertically_on_load(false);
 
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
