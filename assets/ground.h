@@ -24,6 +24,9 @@ public:
           vertices.push_back(z);
           vertices.push_back((float)i * tilingScale);
           vertices.push_back((float)j * tilingScale);
+          vertices.push_back(0.0f);
+          vertices.push_back(1.0f);
+          vertices.push_back(0.0f);
         }
       }
       std::vector<unsigned int> indices;
@@ -57,10 +60,13 @@ public:
       glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
       glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
 
-      glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+      const int stride = 8 * sizeof(float);
+      glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)0);
       glEnableVertexAttribArray(0);
-      glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+      glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, stride, (void*)(3 * sizeof(float)));
       glEnableVertexAttribArray(1);
+      glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, stride, (void*)(5 * sizeof(float)));
+      glEnableVertexAttribArray(2);
 
       glBindVertexArray(0);
 

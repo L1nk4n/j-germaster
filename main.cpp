@@ -13,6 +13,7 @@
 
 #include "assets/cat.h"
 #include "assets/ground.h"
+#include "assets/light_source.h"
 #include "shader/shader.h"
 #include "assets/view_camera.h"
 #include "assets/model.h"
@@ -67,12 +68,16 @@ int main() {
   glfwSetCursorPosCallback(window, mouse_callback);
   glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
-  Shader jaegerShader("assets/6.3.coordinate_system.vs", "assets/6.3.coordinate_system.fs");
+  Shader jaegerShader("assets/6.3.coordinate_system.vs", "assets/3.3.color_shader.fs");
+  Shader lightingShader("assets/6.3.coordinate_system.vs", "assets/3.3.lighting_shader.fs");
   Ground mapGround(100.0f, 50, 0.0f, "resources/ground_texture.jpg");
   Model pistol("resources/3d-sculptures/9mm_pistol/nv_9mm.obj", "resources/3d-sculptures/9mm_pistol/9mm.png");
   FlatModel cat(3.0f, 0.1f, "resources/cat.jpg");
 
-  const int ncats = 50;
+  glm::vec3 lampPos(0.0f, 10.0f, 0.0f);
+  LightSource lamp("resources/3d-sculptures/9mm_pistol/nv_9mm.obj", lampPos, glm::vec3(9.0,0.0,0.0));
+
+  const int ncats = 10;
   std::vector<Cat> cats;
   for (int i = 0; i < ncats; i++) {
     float x = 100.0f * ((double)rand() / RAND_MAX) - 50.0f;
@@ -82,6 +87,9 @@ int main() {
 
   jaegerShader.use();
   jaegerShader.setInt("texture1", 0);
+  jaegerShader.setVec3("lightColor", 1.0f, 1.0f, 1.0f);
+  jaegerShader.setVec3("lightPos", lamp.lightPos());
+  lightingShader.setInt("texture1", 0);
 
   // fps deklaration
   Time::targetFrameTime = 1.0f / 60.0f;
@@ -117,7 +125,18 @@ int main() {
     jaegerShader.setMat4("projection", projection);
     jaegerShader.setMat4("view", view);
 
+    lightingShader.use();
+    lightingShader.setMat4("projection", projection);
+    lightingShader.setMat4("view", view);
+
+    // Draw light source
+    glm::mat4 lampModel(1.0f);
+    lampModel = glm::translate(lampModel, lampPos);
+    lightingShader.setMat4("model", lampModel);
+    lamp.draw();
+
     // Draw ground
+    jaegerShader.use();
     jaegerShader.setMat4("model", model);
     mapGround.draw();
     
