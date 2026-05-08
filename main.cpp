@@ -62,6 +62,7 @@ int main() {
   Shader jaegerShader("assets/6.3.coordinate_system.vs", "assets/6.3.coordinate_system.fs");
   Ground mapGround(100.0f, 50, 0.0f, "resources/ground_texture.jpg");
   Model pistol("resources/3d-sculptures/9mm_pistol/nv_9mm.obj", "resources/3d-sculptures/9mm_pistol/9mm.png");
+  Model bottle("resources/3d-sculptures/columbia_whiskey/Whiskey_Bottle.obj", "resources/3d-sculptures/columbia_whiskey/WhiskeyBottle_DIFF.png");
 
   jaegerShader.use();
   jaegerShader.setInt("texture1", 0);
@@ -113,6 +114,15 @@ int main() {
     pistolModel = glm::rotate(pistolModel, glm::radians(90.0f), glm::vec3(0.0f, 0.4f, 0.0f));
     pistolModel = glm::translate(pistolModel, glm::vec3(-8.0f, 0.4f, 4.4f));
 
+    jaegerShader.setMat4("view", glm::mat4(1.0f));
+    glm::mat4 bottleModel = glm::mat4(1.0f);
+    bottleModel = glm::translate(bottleModel, glm::vec3(-0.4f, -0.33f, -1.3f));
+    bottleModel = glm::scale(bottleModel, glm::vec3(0.008f));
+    bottleModel = glm::rotate(bottleModel, glm::radians(5.0f), glm::vec3(1.0f, 0.0f, 1.0f)); // roll
+    bottleModel = glm::rotate(bottleModel, glm::radians(-35.0f), glm::vec3(1.0f, 0.0f, 0.0f)); // pitch
+    bottleModel = glm::rotate(bottleModel, glm::radians(45.0f), glm::vec3(0.0f, 1.0f, 0.0f)); // yaw
+    bottleModel = glm::translate(bottleModel, glm::vec3(0.0f, -30.87f, 0.0f));
+
     glClear(GL_DEPTH_BUFFER_BIT);
 
     if (muzzleFlashTimer > 0.0f) {
@@ -126,6 +136,10 @@ int main() {
 
     jaegerShader.setMat4("model", pistolModel);
     pistol.draw();
+
+    glDisable(GL_CULL_FACE);
+    jaegerShader.setMat4("model", bottleModel);
+    bottle.draw();
 
     glfwSwapBuffers(window);
     glfwPollEvents();
