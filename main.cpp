@@ -18,9 +18,12 @@
 #include "assets/view_camera.h"
 #include "assets/model.h"
 #include "assets/muzzle_flash.h"
+#include "shader/raycasting.h"
 #include "headers/audio.h"
 #include "headers/time.h"
 #include "assets/flatmodel.h"
+#include "assets/skybox.h"
+#include "headers/text_renderer.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
@@ -62,6 +65,7 @@ int main() {
   stbi_set_flip_vertically_on_load(true);
 
   Camera camera;
+  Raycasting raycaster;
   Audio::init();
   MuzzleFlash muzzleFlash("resources/muzzle_flash.png");
   glfwSetWindowUserPointer(window, &camera);
@@ -84,6 +88,31 @@ int main() {
     float z = 100.0f * ((double)rand() / RAND_MAX) - 50.0f;
     cats.push_back(Cat(glm::vec3(x, 1.5f, z), cat, jaegerShader));
   }
+  Model bottle("resources/3d-sculptures/columbia_whiskey/Whiskey_Bottle.obj", "resources/3d-sculptures/columbia_whiskey/WhiskeyBottle_DIFF.png");
+  TextRenderer textRenderer("resources/fonts/DejaVuSans.ttf", 24);
+
+  /*std::vector<std::string> skyboxFaces = {
+    "resources/skybox/miramar_rt.tga", // +X right
+    "resources/skybox/miramar_lf.tga", // -X left
+    "resources/skybox/miramar_up.tga", // +Y top
+    "resources/skybox/miramar_dn.tga", // -Y bottom
+    "resources/skybox/miramar_ft.tga", // +Z front
+    "resources/skybox/miramar_bk.tga"  // -Z back
+  };*/
+
+  std::vector<std::string> skyboxFaces = {
+    "resources/skybox/miramar_rt.tga", // +X
+    "resources/skybox/miramar_lf.tga", // -X
+    "resources/skybox/miramar_up.tga", // +Y
+    "resources/skybox/miramar_dn.tga", // -Y
+    "resources/skybox/miramar_bk.tga", // +Z (bytt)
+    "resources/skybox/miramar_ft.tga"  // -Z (bytt)
+};
+
+  Shader skyboxShader("assets/skybox.vs", "assets/skybox.fs");
+  Skybox skybox(skyboxFaces);
+  skyboxShader.use();
+  skyboxShader.setInt("skybox", 0);
 
   jaegerShader.use();
   jaegerShader.setInt("texture1", 0);
@@ -98,23 +127,44 @@ int main() {
   bool prevMousePressed = false;
   const float fireCooldown = 0.15;
   float cooldownRemaining = 0.0f;
+  float recoilAmount = 0.0f;
+  const float recoilRecoverySpeed = 5.0f;
+  float flashOffsetX = 16.0f, flashOffsetY = 0.0f, flashOffsetZ = 0.0f;
 
   while(!glfwWindowShouldClose(window)) {
     Time::update();
     processInput(window);
     camera.processInput(window);
+    raycaster.update(window, camera, SRC_WIDTH, SRC_HEIGHT, 45.0f);
     if (cooldownRemaining > 0.0f) cooldownRemaining -= Time::deltaTime;
     if (muzzleFlashTimer > 0.0f) muzzleFlashTimer -= Time::deltaTime;
+    if (recoilAmount > 0.0f) {
+      recoilAmount -= Time::deltaTime * recoilRecoverySpeed;
+      if (recoilAmount < 0.0f) recoilAmount = 0.0f;
+    }
 
     bool mousePressed = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
     if (mousePressed && !prevMousePressed && cooldownRemaining <= 0.0f) {
       Audio::playOneShot("resources/sounds/gunshot.wav");
-      muzzleFlashTimer = 0.05f;
+      muzzleFlashTimer = 0.05f; // ska vara 0.05
       cooldownRemaining = fireCooldown;
+      recoilAmount = 1.0f;
+
+      glm::vec3 origin = raycaster.getRayOrigin();
+      glm::vec3 dir = raycaster.getRayDirection();
+
+      std::cout << "Ray: " << origin.x << " " << origin.y << " " << origin.z << std::endl;
     }
     prevMousePressed = mousePressed;
     glClearColor(0.1f, 0.1f, 0.15f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    skyboxShader.use();
+    glm::mat4 skyboxView = glm::mat4(glm::mat3(camera.getViewMatrix()));
+    skyboxShader.setMat4("view", skyboxView);
+    glm::mat4 skyboxProjection = glm::perspective(glm::radians(45.0f), (float)SRC_WIDTH / (float)SRC_HEIGHT, 0.1f, 1000.0f);
+    skyboxShader.setMat4("projection", skyboxProjection);
+    skybox.draw();
 
     jaegerShader.use();
     glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)SRC_WIDTH / (float)SRC_HEIGHT, 0.1f, 100.0f);
@@ -149,18 +199,30 @@ int main() {
     // Draw pistol
     jaegerShader.setMat4("view", glm::mat4(1.0f));
     glm::mat4 pistolModel = glm::mat4(1.0f);
-    pistolModel = glm::translate(pistolModel, glm::vec3(0.3f, -0.3f, -1.3f));
+    pistolModel = glm::translate(pistolModel, glm::vec3(0.25f, -0.3f, -1.3f));
+
+    pistolModel = glm::translate(pistolModel, glm::vec3(0.0f, 0.0f, recoilAmount * 0.15f));
+    pistolModel = glm::rotate(pistolModel, glm::radians(recoilAmount * 10.0f), glm::vec3(1.0f, 0.0f, 0.0f));
     pistolModel = glm::scale(pistolModel, glm::vec3(0.6f));
-    pistolModel = glm::rotate(pistolModel, glm::radians(-30.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    pistolModel = glm::rotate(pistolModel, glm::radians(90.0f), glm::vec3(0.0f, 0.4f, 0.0f));
+    pistolModel = glm::rotate(pistolModel, glm::radians(-25.0f), glm::vec3(0.0f, 0.0f, 1.0f)); // roll
+    pistolModel = glm::rotate(pistolModel, glm::radians(10.0f), glm::vec3(1.0f, 0.0f, 0.0f)); // pitch
+    pistolModel = glm::rotate(pistolModel, glm::radians(95.0f), glm::vec3(0.0f, 1.0f, 0.0f)); // yaw                                                                             //
     pistolModel = glm::translate(pistolModel, glm::vec3(-8.0f, 0.4f, 4.4f));
+
+    jaegerShader.setMat4("view", glm::mat4(1.0f));
+    glm::mat4 bottleModel = glm::mat4(1.0f);
+    bottleModel = glm::translate(bottleModel, glm::vec3(-0.4f, -0.33f, -1.3f));
+    bottleModel = glm::scale(bottleModel, glm::vec3(0.008f));
+    bottleModel = glm::rotate(bottleModel, glm::radians(5.0f), glm::vec3(1.0f, 0.0f, 1.0f)); // roll
+    bottleModel = glm::rotate(bottleModel, glm::radians(-35.0f), glm::vec3(1.0f, 0.0f, 0.0f)); // pitch
+    bottleModel = glm::rotate(bottleModel, glm::radians(45.0f), glm::vec3(0.0f, 1.0f, 0.0f)); // yaw
+    bottleModel = glm::translate(bottleModel, glm::vec3(0.0f, -30.87f, 0.0f));
 
     glClear(GL_DEPTH_BUFFER_BIT);
 
     if (muzzleFlashTimer > 0.0f) {
       glm::mat4 flashModel = glm::mat4(1.0f);
-      //                                                 x,     y,     z
-      flashModel = glm::translate(flashModel, glm::vec3(0.15f, -0.15f, -1.5f));
+      flashModel = glm::translate(flashModel, glm::vec3(0.15f, -0.07f, -1.5f));
       flashModel = glm::scale(flashModel, glm::vec3(0.3f));
       jaegerShader.setMat4("model", flashModel);
       muzzleFlash.draw();
@@ -168,6 +230,19 @@ int main() {
 
     jaegerShader.setMat4("model", pistolModel);
     pistol.draw();
+
+    glDisable(GL_CULL_FACE);
+    jaegerShader.setMat4("model", bottleModel);
+    bottle.draw();
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glDisable(GL_DEPTH_TEST);
+
+    textRenderer.RenderText("REPPING: https://enrique.se", 100.0f, 500.0f, 1.0f, glm::vec3(1.0f, 1.0f, 0.0f));
+
+    glEnable(GL_DEPTH_TEST);
+    glDisable(GL_BLEND);
 
     glfwSwapBuffers(window);
     glfwPollEvents();

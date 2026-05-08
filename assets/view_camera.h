@@ -30,6 +30,10 @@ class Camera {
       isGrounded(true)
   {}
 
+  glm::vec3 getPosition() const {
+    return cameraPos;
+  }
+
   void update() {
     float currentFrame = static_cast<float>(glfwGetTime());
     deltaTime = currentFrame - lastFrame;
