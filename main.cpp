@@ -1,10 +1,17 @@
+#include <cstdlib>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
+#include <glm/ext/matrix_transform.hpp>
+#include <glm/ext/vector_float3.hpp>
+#include <glm/geometric.hpp>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/trigonometric.hpp>
+#include <vector>
 
+#include "assets/cat.h"
 #include "assets/ground.h"
 #include "shader/shader.h"
 #include "assets/view_camera.h"
@@ -12,6 +19,7 @@
 #include "assets/muzzle_flash.h"
 #include "headers/audio.h"
 #include "headers/time.h"
+#include "assets/flatmodel.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
@@ -62,6 +70,15 @@ int main() {
   Shader jaegerShader("assets/6.3.coordinate_system.vs", "assets/6.3.coordinate_system.fs");
   Ground mapGround(100.0f, 50, 0.0f, "resources/ground_texture.jpg");
   Model pistol("resources/3d-sculptures/9mm_pistol/nv_9mm.obj", "resources/3d-sculptures/9mm_pistol/9mm.png");
+  FlatModel cat(3.0f, 0.1f, "resources/cat.jpg");
+
+  const int ncats = 50;
+  std::vector<Cat> cats;
+  for (int i = 0; i < ncats; i++) {
+    float x = 100.0f * ((double)rand() / RAND_MAX) - 50.0f;
+    float z = 100.0f * ((double)rand() / RAND_MAX) - 50.0f;
+    cats.push_back(Cat(glm::vec3(x, 1.5f, z), cat, jaegerShader));
+  }
 
   jaegerShader.use();
   jaegerShader.setInt("texture1", 0);
@@ -103,6 +120,12 @@ int main() {
     // Draw ground
     jaegerShader.setMat4("model", model);
     mapGround.draw();
+    
+    // Draw Cat
+    for (int i = 0; i < ncats; i++) {
+      cats[i].lookAt(camera.getEyePosition());
+      cats[i].update();
+    }
 
     // Draw pistol
     jaegerShader.setMat4("view", glm::mat4(1.0f));

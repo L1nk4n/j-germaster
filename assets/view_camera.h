@@ -9,6 +9,7 @@
 #include <cmath>
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
+#include <utility>
 
 const float mapSize = 50.0f;
 
@@ -35,20 +36,38 @@ class Camera {
     lastFrame = currentFrame;
   }
 
+  glm::vec3 getPosition() {
+    return cameraPos;
+  }
+
+  glm::vec3 getEyePosition() {
+    return cameraPos + glm::vec3(0.0f, eyeHeight, 0.0f);
+  }
+
   void processInput(GLFWwindow* window) {
-      const float cameraSpeed = 5.5f * Time::deltaTime;
+      float cameraSpeed = 5.5f * Time::deltaTime;;
 
       glm::vec3 flatFront = glm::normalize(glm::vec3(cameraFront.x, 0.0f, cameraFront.z));
       glm::vec3 flatRight = glm::normalize(glm::cross(flatFront, cameraUp));
 
-      if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-          cameraPos += cameraSpeed * cameraFront;
-      if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-          cameraPos -= cameraSpeed * cameraFront;
-      if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-          cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
-      if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-          cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+      if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+          cameraSpeed = 8.5f * Time::deltaTime;
+
+      int forwardInput = (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) - (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS);
+      int sideInput = (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) - (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS);
+
+      glm::vec3 moveDirection = glm::normalize(flatFront * (float)forwardInput + flatRight * (float)sideInput);
+      if (!glm::any(glm::isnan(moveDirection)))
+        cameraPos += cameraSpeed * moveDirection;
+
+      // if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+      //     cameraPos += cameraSpeed * cameraFront;
+      // if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+      //     cameraPos -= cameraSpeed * cameraFront;
+      // if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+      //     cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+      // if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+      //     cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
 
       if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && isGrounded) {
         verticalVelocity = jumpStrength;
