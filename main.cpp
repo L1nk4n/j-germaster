@@ -1,3 +1,6 @@
+#define _POSIX_C_SOURCE 200809L
+#define _GNU_SOURCE
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -67,7 +70,6 @@ int main() {
   Ground mapGround(100.0f, 50, 0.0f, "resources/ground_texture.jpg");
   Model pistol("resources/3d-sculptures/9mm_pistol/nv_9mm.obj", "resources/3d-sculptures/9mm_pistol/9mm.png");
   Model bottle("resources/3d-sculptures/columbia_whiskey/Whiskey_Bottle.obj", "resources/3d-sculptures/columbia_whiskey/WhiskeyBottle_DIFF.png");
-  TextRenderer textRenderer("resources/fonts/DejaVuSans.ttf", 24);
 
   /*std::vector<std::string> skyboxFaces = {
     "resources/skybox/miramar_rt.tga", // +X right
@@ -94,6 +96,8 @@ int main() {
 
   jaegerShader.use();
   jaegerShader.setInt("texture1", 0);
+
+  TextRenderer textRenderer("resources/fonts/DejaVuSans.ttf");
 
   // fps deklaration
   Time::targetFrameTime = 1.0f / 60.0f;
@@ -193,14 +197,13 @@ int main() {
     jaegerShader.setMat4("model", bottleModel);
     bottle.draw();
 
+    glDisable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glDisable(GL_DEPTH_TEST);
 
-    textRenderer.RenderText("REPPING: https://enrique.se", 100.0f, 500.0f, 1.0f, glm::vec3(1.0f, 1.0f, 0.0f));
+    textRenderer.RenderText("JÄGER", 25.0f, 560.0f, 0.8f, glm::vec3(1.0f, 0.8f, 0.2f));
 
     glEnable(GL_DEPTH_TEST);
-    glDisable(GL_BLEND);
 
     glfwSwapBuffers(window);
     glfwPollEvents();
