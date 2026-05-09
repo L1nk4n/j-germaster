@@ -117,7 +117,7 @@ int main() {
 
   jaegerShader.use();
   jaegerShader.setInt("texture1", 0);
-  jaegerShader.setVec3("lightColor", 1.0f, 1.0f, 1.0f);
+  jaegerShader.setVec3("lightColor", glm::vec3(1.0f, 1.0f, 1.0f));
 
   jaegerShader.setVec3("uSunDir", glm::normalize(glm::vec3(-0.3f, 0.9f, -0.2f)));
   jaegerShader.setVec3("uSunColor",      glm::vec3(0.85f, 0.85f, 0.92f));
@@ -142,7 +142,7 @@ int main() {
     Time::update();
     processInput(window);
     camera.processInput(window);
-    jaegerShader.setVec3("viewPos", camera.getEyePosition());
+    jaegerShader.setVec3("viewPos", camera.getPosition());
     raycaster.update(window, camera, SRC_WIDTH, SRC_HEIGHT, 45.0f);
     if (cooldownRemaining > 0.0f) cooldownRemaining -= Time::deltaTime;
     if (muzzleFlashTimer > 0.0f) muzzleFlashTimer -= Time::deltaTime;
@@ -209,7 +209,7 @@ int main() {
 
     // ---------- CATS ----------
     for (int i = 0; i < ncats; i++) {
-      cats[i].lookAt(camera.getEyePosition());
+      cats[i].lookAt(camera.getPosition());
       cats[i].update();
     }
 
