@@ -1,11 +1,22 @@
+#define _POSIX_C_SOURCE 200809L
+#define _GNU_SOURCE
+
+#include <cstdlib>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
+#include <glm/ext/matrix_transform.hpp>
+#include <glm/ext/vector_float3.hpp>
+#include <glm/geometric.hpp>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/trigonometric.hpp>
+#include <vector>
 
 #include "assets/terrain.h"
+#include "assets/cat.h"
+#include "assets/light_source.h"
 #include "shader/shader.h"
 #include "assets/view_camera.h"
 #include "assets/model.h"
@@ -13,6 +24,7 @@
 #include "shader/raycasting.h"
 #include "headers/audio.h"
 #include "headers/time.h"
+#include "assets/flatmodel.h"
 #include "assets/skybox.h"
 //#include "headers/text_renderer.h"
 
@@ -75,15 +87,27 @@ int main() {
   camera.setPosition(glm::vec3(0.0f, terrain.getHeightAt(0, 0) + 5.0f, 0.0f));
 
   Model pistol("resources/3d-sculptures/9mm_pistol/nv_9mm.obj", "resources/3d-sculptures/9mm_pistol/9mm.png");
+  FlatModel cat(3.0f, 0.1f, "resources/cat.jpg");
+
+  glm::vec3 lampPos(0.0f, 10.0f, 0.0f);
+  LightSource lamp("resources/3d-sculptures/9mm_pistol/nv_9mm.obj", lampPos, glm::vec3(9.0,0.0,0.0));
+
+  const int ncats = 10;
+  std::vector<Cat> cats;
+  for (int i = 0; i < ncats; i++) {
+    float x = 100.0f * ((double)rand() / RAND_MAX) - 50.0f;
+    float z = 100.0f * ((double)rand() / RAND_MAX) - 50.0f;
+    cats.push_back(Cat(glm::vec3(x, 1.5f, z), cat, jaegerShader));
+  }
   Model bottle("resources/3d-sculptures/columbia_whiskey/Whiskey_Bottle.obj", "resources/3d-sculptures/columbia_whiskey/WhiskeyBottle_DIFF.png");
 
   std::vector<std::string> skyboxFaces = {
-    "resources/skybox/miramar_rt.tga",
-    "resources/skybox/miramar_lf.tga",
-    "resources/skybox/miramar_up.tga",
-    "resources/skybox/miramar_dn.tga",
-    "resources/skybox/miramar_bk.tga",
-    "resources/skybox/miramar_ft.tga"
+    "resources/skybox/miramar_rt.tga", // +X
+    "resources/skybox/miramar_lf.tga", // -X
+    "resources/skybox/miramar_up.tga", // +Y
+    "resources/skybox/miramar_dn.tga", // -Y
+    "resources/skybox/miramar_bk.tga", // +Z (bytt)
+    "resources/skybox/miramar_ft.tga"  // -Z (bytt)
   };
 
   Shader skyboxShader("assets/skybox.vs", "assets/skybox.fs");
@@ -93,6 +117,7 @@ int main() {
 
   jaegerShader.use();
   jaegerShader.setInt("texture1", 0);
+  jaegerShader.setVec3("lightColor", 1.0f, 1.0f, 1.0f);
 
   jaegerShader.setVec3("uSunDir", glm::normalize(glm::vec3(-0.3f, 0.9f, -0.2f)));
   jaegerShader.setVec3("uSunColor",      glm::vec3(0.85f, 0.85f, 0.92f));
@@ -117,6 +142,7 @@ int main() {
     Time::update();
     processInput(window);
     camera.processInput(window);
+    jaegerShader.setVec3("viewPos", camera.getEyePosition());
     raycaster.update(window, camera, SRC_WIDTH, SRC_HEIGHT, 45.0f);
     if (cooldownRemaining > 0.0f) cooldownRemaining -= Time::deltaTime;
     if (muzzleFlashTimer > 0.0f) muzzleFlashTimer -= Time::deltaTime;
@@ -155,10 +181,9 @@ int main() {
     // ---------- WORLD SHADER SETUP ----------
     jaegerShader.use();
     jaegerShader.setVec3("uCameraPos", camera.getPosition());
-    // NOTE: bumped far plane to 500 so big terrain doesn't get clipped
     glm::mat4 projection = glm::perspective(glm::radians(45.0f),
                                             (float)SRC_WIDTH / (float)SRC_HEIGHT,
-                                            0.1f, 500.0f);
+                                            0.1f, 1500.0f);
     glm::mat4 view = camera.getViewMatrix();
     glm::mat4 model = glm::mat4(1.0f);
 
@@ -166,14 +191,27 @@ int main() {
     jaegerShader.setMat4("view", view);
     jaegerShader.setMat4("model", model);
 
+    // ---------- LAMP (light source visualization) ----------
+    glm::mat4 lampModel(1.0f);
+    lampModel = glm::translate(lampModel, lampPos);
+    jaegerShader.setMat4("model", lampModel);
+    lamp.draw();
+
     // ---------- TERRAIN ----------
+    jaegerShader.setMat4("model", model);
     jaegerShader.setBool("uTerrain", true);
     jaegerShader.setInt("grassTex", 0);
     jaegerShader.setInt("rockTex", 1);
-    jaegerShader.setInt("snowTex", 2);   // FIX: was 1
+    jaegerShader.setInt("snowTex", 2);
     terrain.draw();
     jaegerShader.setBool("uTerrain", false);
     jaegerShader.setInt("texture1", 0); // models use unit 0
+
+    // ---------- CATS ----------
+    for (int i = 0; i < ncats; i++) {
+      cats[i].lookAt(camera.getEyePosition());
+      cats[i].update();
+    }
 
     // ---------- VIEWMODEL (pistol + bottle): identity view ----------
     glClear(GL_DEPTH_BUFFER_BIT);  // so viewmodel never clips into terrain
@@ -185,9 +223,9 @@ int main() {
     pistolModel = glm::translate(pistolModel, glm::vec3(0.0f, 0.0f, recoilAmount * 0.15f));
     pistolModel = glm::rotate(pistolModel, glm::radians(recoilAmount * 10.0f), glm::vec3(1.0f, 0.0f, 0.0f));
     pistolModel = glm::scale(pistolModel, glm::vec3(0.6f));
-    pistolModel = glm::rotate(pistolModel, glm::radians(-25.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    pistolModel = glm::rotate(pistolModel, glm::radians(10.0f),  glm::vec3(1.0f, 0.0f, 0.0f));
-    pistolModel = glm::rotate(pistolModel, glm::radians(95.0f),  glm::vec3(0.0f, 1.0f, 0.0f));
+    pistolModel = glm::rotate(pistolModel, glm::radians(-25.0f), glm::vec3(0.0f, 0.0f, 1.0f)); // roll
+    pistolModel = glm::rotate(pistolModel, glm::radians(10.0f), glm::vec3(1.0f, 0.0f, 0.0f)); // pitch
+    pistolModel = glm::rotate(pistolModel, glm::radians(95.0f), glm::vec3(0.0f, 1.0f, 0.0f)); // yaw
     pistolModel = glm::translate(pistolModel, glm::vec3(-8.0f, 0.4f, 4.4f));
 
     glm::mat4 bottleModel = glm::mat4(1.0f);
