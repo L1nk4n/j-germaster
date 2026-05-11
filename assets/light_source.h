@@ -30,6 +30,10 @@ public:
         return worldPosition + relLightPosition;
     }
 
+    glm::vec3 pos() {
+        return worldPosition;
+    }
+
     void draw() const {
         glActiveTexture(GL_TEXTURE0);
         glBindVertexArray(VAO);

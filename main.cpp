@@ -1,5 +1,7 @@
 #define _POSIX_C_SOURCE 200809L
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
 
 #include <cstdlib>
 #include <glad/glad.h>
@@ -74,14 +76,21 @@ int main() {
   glfwSetCursorPosCallback(window, mouse_callback);
   glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
-  Shader jaegerShader("assets/6.3.coordinate_system.vs", "assets/3.3.color_shader.fs");
-  Shader lightingShader("assets/6.3.coordinate_system.vs", "assets/3.3.lighting_shader.fs");
   Ground mapGround(100.0f, 50, 0.0f, "resources/ground_texture.jpg");
   Model pistol("resources/3d-sculptures/9mm_pistol/nv_9mm.obj", "resources/3d-sculptures/9mm_pistol/9mm.png");
   FlatModel cat(3.0f, 0.1f, "resources/cat.jpg");
 
-  glm::vec3 lampPos(0.0f, 10.0f, 0.0f);
-  LightSource lamp("resources/3d-sculptures/9mm_pistol/nv_9mm.obj", lampPos, glm::vec3(9.0,0.0,0.0));
+  LightSource lamp1("resources/3d-sculptures/9mm_pistol/nv_9mm.obj", glm::vec3(0.0f, 9.0f, 0.0f), glm::vec3(9.0,0.0,0.0));
+  LightSource lamp2("resources/3d-sculptures/9mm_pistol/nv_9mm.obj", glm::vec3(20.0f, 9.0f, 0.0f), glm::vec3(9.0,0.0,0.0));
+
+  Shader jaegerShader("assets/6.3.coordinate_system.vs", "assets/3.3.color_shader.fs", {}, {});
+  Shader lightingShader("assets/6.3.coordinate_system.vs", "assets/3.3.lighting_shader.fs", {}, {});
+
+  jaegerShader.addDirLight(glm::vec3(0.0f, -1.0f, -0.5f));
+  //jaegerShader.addPointLight(lamp1.lightPos());
+  //jaegerShader.addPointLight(lamp2.lightPos());
+  //jaegerShader.addFlashLight(glm::cos(glm::radians(12.5)), glm::cos(glm::radians(17.5)));
+  jaegerShader.recompileShaders();
 
   const int ncats = 10;
   std::vector<Cat> cats;
@@ -92,15 +101,6 @@ int main() {
   }
   Model bottle("resources/3d-sculptures/columbia_whiskey/Whiskey_Bottle.obj", "resources/3d-sculptures/columbia_whiskey/WhiskeyBottle_DIFF.png");
 
-  /*std::vector<std::string> skyboxFaces = {
-    "resources/skybox/miramar_rt.tga", // +X right
-    "resources/skybox/miramar_lf.tga", // -X left
-    "resources/skybox/miramar_up.tga", // +Y top
-    "resources/skybox/miramar_dn.tga", // -Y bottom
-    "resources/skybox/miramar_ft.tga", // +Z front
-    "resources/skybox/miramar_bk.tga"  // -Z back
-  };*/
-
   std::vector<std::string> skyboxFaces = {
     "resources/skybox/miramar_rt.tga", // +X
     "resources/skybox/miramar_lf.tga", // -X
@@ -110,24 +110,18 @@ int main() {
     "resources/skybox/miramar_ft.tga"  // -Z (bytt)
   };
 
-  Shader skyboxShader("assets/skybox.vs", "assets/skybox.fs");
+  Shader skyboxShader("assets/skybox.vs", "assets/skybox.fs", {}, {});
   Skybox skybox(skyboxFaces);
   skyboxShader.use();
   skyboxShader.setInt("skybox", 0);
 
   jaegerShader.use();
   jaegerShader.setInt("texture1", 0);
-  jaegerShader.setVec3("lightColor", 1.0f, 1.0f, 1.0f);
 
   jaegerShader.setVec3("material.ambient", 1.0f, 1.0f, 1.0f);
   jaegerShader.setVec3("material.diffuse", 1.0f, 1.0f, 1.0f);
   jaegerShader.setVec3("material.specular", 0.5f, 0.5f, 0.5f);
-  jaegerShader.setInt("material.shininess", 64);
-
-  jaegerShader.setVec3("light.ambient", 0.2f, 0.2f, 0.2f);
-  jaegerShader.setVec3("light.diffuse", 0.5f, 0.5f, 0.5f);
-  jaegerShader.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
-  jaegerShader.setVec3("light.direction", 0.0f, -1.0f, 0.0f);
+  jaegerShader.setInt("material.shininess", 128);
 
   lightingShader.use();
   lightingShader.setInt("texture1", 0);
@@ -147,7 +141,10 @@ int main() {
     Time::update();
     processInput(window);
     camera.processInput(window);
-    jaegerShader.setVec3("viewPos", camera.getEyePosition());
+
+    jaegerShader.setVec3("viewPos", camera.getPosition());
+    jaegerShader.setVec3("cViewDir", camera.getViewDirection());
+
     raycaster.update(window, camera, SRC_WIDTH, SRC_HEIGHT, 45.0f);
     if (cooldownRemaining > 0.0f) cooldownRemaining -= Time::deltaTime;
     if (muzzleFlashTimer > 0.0f) muzzleFlashTimer -= Time::deltaTime;
@@ -167,6 +164,7 @@ int main() {
       glm::vec3 dir = raycaster.getRayDirection();
 
       std::cout << "Ray: " << origin.x << " " << origin.y << " " << origin.z << std::endl;
+      std::cout << "Dir: " << dir.x << " " << dir.y << " " << dir.z << std::endl;
     }
     prevMousePressed = mousePressed;
     glClearColor(0.1f, 0.1f, 0.15f, 1.0f);
@@ -193,10 +191,15 @@ int main() {
     lightingShader.setMat4("view", view);
 
     // Draw light source
-    glm::mat4 lampModel(1.0f);
-    lampModel = glm::translate(lampModel, lampPos);
-    lightingShader.setMat4("model", lampModel);
-    lamp.draw();
+    glm::mat4 lampModel1(1.0f);
+    lampModel1 = glm::translate(lampModel1, lamp1.pos());
+    lightingShader.setMat4("model", lampModel1);
+    lamp1.draw();
+
+    glm::mat4 lampModel2(1.0f);
+    lampModel2 = glm::translate(lampModel2, lamp2.pos());
+    lightingShader.setMat4("model", lampModel2);
+    lamp2.draw();
 
     // Draw ground
     jaegerShader.use();
@@ -251,8 +254,6 @@ int main() {
     glDisable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    textRenderer.RenderText("JÄGER", 25.0f, 560.0f, 0.8f, glm::vec3(1.0f, 0.8f, 0.2f));
 
     glEnable(GL_DEPTH_TEST);
 

@@ -22,7 +22,7 @@ public:
           vertices.push_back((float)j);
           vertices.push_back((float)i);
           vertices.push_back(0.0f);
-          vertices.push_back(1.0f);
+          vertices.push_back(-1.0f);
           vertices.push_back(0.0f);
         }
       }

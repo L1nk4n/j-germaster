@@ -48,6 +48,10 @@ class Camera {
     return cameraPos + glm::vec3(0.0f, eyeHeight, 0.0f);
   }
 
+  glm::vec3 getViewDirection() {
+    return cameraFront;
+  }
+
   void processInput(GLFWwindow* window) {
       float cameraSpeed = 5.5f * Time::deltaTime;;
 
@@ -63,15 +67,6 @@ class Camera {
       glm::vec3 moveDirection = glm::normalize(flatFront * (float)forwardInput + flatRight * (float)sideInput);
       if (!glm::any(glm::isnan(moveDirection)))
         cameraPos += cameraSpeed * moveDirection;
-
-      // if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-      //     cameraPos += cameraSpeed * cameraFront;
-      // if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-      //     cameraPos -= cameraSpeed * cameraFront;
-      // if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-      //     cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
-      // if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-      //     cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
 
       if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && isGrounded) {
         verticalVelocity = jumpStrength;
@@ -123,7 +118,7 @@ class Camera {
 private:
   static constexpr float gravity = 20.0f;
   static constexpr float jumpStrength = 7.0f;
-  static constexpr float eyeHeight = 1.7f;
+  static constexpr float eyeHeight = 3.4f;
   static constexpr float groundLevel = 0.0f;
 
   glm::vec3 cameraPos;
